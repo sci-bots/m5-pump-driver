@@ -29,8 +29,11 @@ async def pump(i2c, i2c_address, pin, pulses, on_ms=50, off_ms=150):
     '''
     driver = gm.BaseDriver(i2c, i2c_address)
     await asyncio.sleep_ms(0)
-    for i in range(pulses):
-        driver.digital_write(pin, 1)
-        await asyncio.sleep_ms(on_ms)
-        driver.digital_write(pin, 0)
-        await asyncio.sleep_ms(off_ms)
+    try:
+        for i in range(pulses):
+            driver.digital_write(pin, 1)
+            await asyncio.sleep_ms(on_ms)
+            driver.digital_write(pin, 0)
+            await asyncio.sleep_ms(off_ms)
+    except Exception as exception:
+        print('Error pumping:', exception)

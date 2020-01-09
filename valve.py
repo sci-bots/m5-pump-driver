@@ -21,6 +21,9 @@ async def set_valve(i2c, i2c_address, pin, state):
     '''
     driver = BaseDriver(i2c, i2c_address)
     await asyncio.sleep_ms(0)
-    driver.digital_write(pin, state)
+    try:
+        driver.digital_write(pin, state)
+    except Exception as exception:
+        print('Error setting valve:', exception)
     del driver
     gc.collect()
