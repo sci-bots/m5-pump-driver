@@ -31,13 +31,13 @@ DEFAULT_SETTINGS = {
 # Valve paths: A=0, B=1
 steps = [
     {'name': 'Rehydrate Lysate',
-     'steps': [{'pump': 'c', 'label': 'H20 -> A', 'volume': 1e-3}]},
+     'steps': [{'pump': 'c', 'label': 'H2O -> A', 'volume': 1e-3}]},
     {'name': 'Mix Lysate/reagents',
      'steps': [{'pump': 'f', 'label': 'A -> B'},
                {'pump': 'g', 'label': 'B -> A',
                 'valves': [{'valve': 'm', 'path': 0}]}]},
     {'name': 'Rehydrate Wash Buffer',
-     'steps': [{'pump': 'a', 'label': 'H20 -> WB', 'volume': 5e-3},
+     'steps': [{'pump': 'a', 'label': 'H2O -> WB', 'volume': 5e-3},
                {'pump': 'd', 'label': 'Mix WB',
                 'valves': [{'valve': 'k', 'path': 0}]}]},
     {'name': 'Purification I',
@@ -47,4 +47,21 @@ steps = [
                            {'valve': 'o', 'path': 0},
                            {'valve': 'n', 'path': 0},
                            {'valve': 'p', 'path': 0}]}]},
+    {'name': 'Rehydrate Elution Buffer',
+     'steps': [{'pump': 'b', 'label': 'H2O -> EB', 'volume': 2e-3},
+               {'pump': 'e', 'label': 'Mix EB',
+                'valves': [{'valve': 'l', 'path': 0}]}]},
+    {'name': 'Purification II',
+     'steps': [{'pump': ['d', 'h'],  # Multiple concurrent pumps
+                'label': 'WB -> Beads 1',
+                'valves': [{'valve': 'k', 'path': 1},
+                           {'valve': 'n', 'path': 1},
+                           {'valve': 'o', 'path': 1}]}]},
+   {'name': 'Purification III',
+     'steps': [{'pump': ['e', 'h', 'i'],  # Multiple concurrent pumps
+                'label': 'EB -> Beads 2',
+                'valves': [{'valve': 'l', 'path': 1},
+                           {'valve': 'o', 'path': 1},
+                           {'valve': 'n', 'path': 0},
+                           {'valve': 'p', 'path': 1}]}]},
 ]
