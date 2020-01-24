@@ -68,12 +68,15 @@ tabview = InputsTabView(lv.scr_act(), (ui_context['button_driver'],
                                        ui_context['faces_driver']))
 
 pumps = sorted(set(pump for super_step in steps for step in super_step['steps']
-                   for pump in (step['pump'] if isinstance(step['pump'], list)
-                                else [step['pump']])))
+                   for pump in (step.get('pump', [])
+                   if isinstance(step.get('pump', []), list)
+                   else [step.get('pump', [])])))
 valves = sorted(set(valve['valve'] for super_step in steps
                     for step in super_step['steps']
                     for valve in step.get('valves', tuple())))
-
+switches = sorted(set(switches['pin'] for super_step in steps
+                    for step in super_step['steps']
+                    for switches in step.get('switches', tuple())))
 step_names = tuple(step['label'] for super_step in steps
                    for step in super_step['steps'])
 steps_list = tabview.add_widget('Steps', ui.PumpList, step_names,
@@ -113,6 +116,10 @@ for config_i, valve_i in zip((address_map[v] for v in valves),
                                            output_pins[config_i['index']]))
     gc.collect()
 
+async def set_switch(pin, value):
+    Pin(pin, Pin.OUT).value(value)
+    gc.collect()
+
 def apply_step(step, widget):
     loop = asyncio.get_event_loop()
     if 'valves' in step:
@@ -131,6 +138,11 @@ def apply_step(step, widget):
             off_ms = max(max(period_ms, 50) - 50, 150)
             loop.create_task(pump(i2c, p['addr'], output_pins[p['index']],
                                   widget.pulses, off_ms=off_ms))
+
+    if 'switches' in step:
+        for switch_state in step['switches']:
+            loop.create_task(set_switch(switch_state['pin'],
+                                        switch_state['value']))
 
 def step_callback(step, widget, obj, event, *args, **kwargs):
     if event == lv.EVENT.PRESSED:
