@@ -43,7 +43,7 @@ class Pump(lv.cont):
         pulses_spinbox.set_width((digits + 1) * character_width)
         pulses_spinbox.set_digit_format(digits, 0)
         pulses_spinbox.set_range(1, 125)
-        pulses_spinbox.set_value(20)
+        pulses_spinbox.set_value(80)
 
         period_i = lv.cont(self)
         period_i.set_style(lv.cont.STYLE.MAIN, style)
@@ -56,7 +56,7 @@ class Pump(lv.cont):
         period_spinbox.set_width((digits + 1) * character_width)
         period_spinbox.set_digit_format(digits, digits - 1)
         period_spinbox.set_range(2, 1000)
-        period_spinbox.set_value(5)
+        period_spinbox.set_value(40)
 
         self.button = button_i
         self.pulses_spinbox = pulses_spinbox
