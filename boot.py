@@ -155,5 +155,9 @@ for step_i, widget_i in zip((step for super_step in steps
     widget_i.button.set_event_cb(ft.partial(step_callback, step_i, widget_i))
     gc.collect()
 
+    # Update the number of 'pulses' for steps where it is specified.
+    if 'pulses' in step_i.keys():
+        widget_i.pulses_spinbox.set_value(step_i['pulses'])
+        gc.collect()
 
 _thread.start_new_thread(loop.run_forever, tuple())
