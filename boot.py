@@ -160,4 +160,8 @@ for step_i, widget_i in zip((step for super_step in steps
         widget_i.pulses_spinbox.set_value(step_i['pulses'])
         gc.collect()
 
+# Cycle the encoder through all of the widgets on the "Steps" tab to hide
+# the blinking cursors on the spinboxes.
+encoder._diff = len(steps_list.pumps) * 3 + 1
+
 _thread.start_new_thread(loop.run_forever, tuple())
