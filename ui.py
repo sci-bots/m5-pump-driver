@@ -18,7 +18,8 @@ class Button(lv.btn):
 class Pump(lv.cont):
     def __init__(
             self, parent, label, default_pulses=20, min_pulses=1,
-            max_pulses=125, style=None):
+            max_pulses=300, default_period=1, min_period=0.2, max_period=100,
+            style=None):
         super().__init__(parent)
         if style is None:
             style = lv.style_t()
@@ -42,8 +43,8 @@ class Pump(lv.cont):
         digits = 3
         pulses_spinbox.set_width((digits + 1) * character_width)
         pulses_spinbox.set_digit_format(digits, 0)
-        pulses_spinbox.set_range(1, 125)
-        pulses_spinbox.set_value(80)
+        pulses_spinbox.set_range(min_pulses, max_pulses)
+        pulses_spinbox.set_value(default_pulses)
 
         period_i = lv.cont(self)
         period_i.set_style(lv.cont.STYLE.MAIN, style)
@@ -55,8 +56,8 @@ class Pump(lv.cont):
         period_spinbox = lv.spinbox(period_i)
         period_spinbox.set_width((digits + 1) * character_width)
         period_spinbox.set_digit_format(digits, digits - 1)
-        period_spinbox.set_range(2, 1000)
-        period_spinbox.set_value(40)
+        period_spinbox.set_range(int(min_period * 10), int(max_period * 10))
+        period_spinbox.set_value(int(default_period * 10))
 
         self.button = button_i
         self.pulses_spinbox = pulses_spinbox
