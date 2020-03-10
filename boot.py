@@ -11,7 +11,7 @@ from config import DEFAULT_SETTINGS, address_map, steps
 from machine import I2C, Pin
 from lvgl_helpers import InputsTabView
 from m5_lvgl import M5ili9341
-from pump import pump
+from pump import Pump
 from valve import set_valve
 import functools as ft
 import grove_i2c_motor as gm
@@ -68,19 +68,12 @@ loop.create_task(faces_encoder_update(encoder))
 tabview = InputsTabView(lv.scr_act(), (ui_context['button_driver'],
                                        ui_context['faces_driver']))
 
-pumps = sorted(set(pump for super_step in steps for step in super_step['steps']
-                   for pump in (step.get('pump', [])
-                   if isinstance(step.get('pump', []), list)
-                   else [step.get('pump', [])])))
-valves = sorted(set(valve['valve'] for super_step in steps
-                    for step in super_step['steps']
-                    for valve in step.get('valves', tuple())))
 switches = sorted(set(switches['pin'] for super_step in steps
                     for step in super_step['steps']
                     for switches in step.get('switches', tuple())))
 step_names = tuple(step['label'] for super_step in steps
                    for step in super_step['steps'])
-steps_tab = tabview.add_widget('Steps', ui.PumpList, step_names,
+steps_tab = tabview.add_widget('Steps', ui.StepList, step_names,
                                ui_context['style'])
 steps_list = [step for super_step in steps for step in super_step['steps']]
 
@@ -89,6 +82,7 @@ sequences_tab = tabview.add_widget('Sequences', ui.SequenceList, ['Mix A+B'],
 
 gc.collect()
 
+running_pumps = {}
 mix_ab_running = False
 mix_ab_start_time = 0
 
@@ -111,11 +105,11 @@ async def mix_ab():
 
             if minutes == 0 and liquid_in_a:
                 i = find_step('A -> B')
-                apply_step(steps_list[i], steps_tab.pumps[i])
+                apply_step(steps_list[i], steps_tab.steps[i])
                 liquid_in_a = False
             elif minutes == 30 and not liquid_in_a:
                 i = find_step('B -> A')
-                apply_step(steps_list[i], steps_tab.pumps[i])
+                apply_step(steps_list[i], steps_tab.steps[i])
                 liquid_in_a = True
 
             if hours >= 16:
@@ -156,7 +150,20 @@ async def set_switch(pin, value):
     Pin(pin, Pin.OUT).value(value)
     gc.collect()
 
+
+def cleanup_pumps():
+    global running_pumps
+    for k, v in running_pumps.items():
+        if v.pulses == 0:
+            i = find_step(k)
+            if steps_tab.steps[i].button.get_state():
+                steps_tab.steps[i].button.toggle()
+            running_pumps.pop(k)
+    gc.collect()
+
+
 def apply_step(step, widget):
+    global running_pumps
     loop = asyncio.get_event_loop()
     if 'valves' in step:
         for valve_state in step['valves']:
@@ -172,8 +179,14 @@ def apply_step(step, widget):
             p = address_map[key]
             period_ms = int(1e3 * widget.period)
             off_ms = max(max(period_ms, 50) - 50, 150)
-            loop.create_task(pump(i2c, p['addr'], output_pins[p['index']],
-                                  widget.pulses, off_ms=off_ms))
+
+            # If this step is currently running, kill it
+            if step['label'] in running_pumps:
+                running_pumps[step['label']].stop()
+
+            running_pumps[step['label']] = Pump(i2c, p['addr'],
+                output_pins[p['index']], cleanup_pumps, off_ms)
+            loop.create_task(running_pumps[step['label']].execute(widget.pulses))
 
     if 'switches' in step:
         for switch_state in step['switches']:
@@ -181,13 +194,22 @@ def apply_step(step, widget):
                                         switch_state['value']))
 
 def step_callback(step, widget, obj, event, *args, **kwargs):
-    if event == lv.EVENT.PRESSED:
-        apply_step(step, widget)
+    global running_pumps
+    if event == lv.EVENT.VALUE_CHANGED:
+        state = widget.button.get_state()
+
+        # button toggled on
+        if state == lv.btn.STATE.TGL_REL:
+            apply_step(step, widget)
+        # button toggled off
+        elif state == lv.btn.STATE.REL:
+            if step['label'] in running_pumps:
+                running_pumps[step['label']].stop()
         gc.collect()
 
 for step_i, widget_i in zip((step for super_step in steps
                              for step in super_step['steps']),
-                            steps_tab.pumps):
+                            steps_tab.steps):
     widget_i.button.set_event_cb(ft.partial(step_callback, step_i, widget_i))
     gc.collect()
 
@@ -198,6 +220,6 @@ for step_i, widget_i in zip((step for super_step in steps
 
 # Cycle the encoder through all of the widgets on the "Steps" tab to hide
 # the blinking cursors on the spinboxes.
-encoder._diff = len(steps_tab.pumps) * 3 + 1
+encoder._diff = len(steps_tab.steps) * 3 + 1
 
 _thread.start_new_thread(loop.run_forever, tuple())
