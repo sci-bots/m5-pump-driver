@@ -60,6 +60,7 @@ class Pump(lv.cont):
         period_spinbox.set_value(int(default_period * 10))
 
         self.button = button_i
+        self.label = label
         self.pulses_spinbox = pulses_spinbox
         self.period_spinbox = period_spinbox
 
@@ -164,3 +165,27 @@ class ValveList(InputsContainer):
         self.valves = [Valve(self, name, style=style)
                        for name in names]
         self.set_layout(lv.LAYOUT.PRETTY)
+
+
+class Sequence(lv.cont):
+    def __init__(self, parent, label, style=None):
+        super().__init__(parent)
+        if style is None:
+            style = lv.style_t()
+            lv.style_copy(style, lv.style_transp)
+        self.set_style(lv.cont.STYLE.MAIN, style)
+        self.set_auto_realign(True)
+        self.set_fit(lv.FIT.TIGHT)
+        self.set_layout(lv.LAYOUT.ROW_M)
+
+        self.label = lv.label(self)
+        self.label.set_text(label)
+        self.switch = lv.sw(self)
+        self.time = lv.label(self)
+        self.time.set_text('')
+
+class SequenceList(InputsContainer):
+    def __init__(self, parent, names, style=None):
+        super().__init__(parent, style=style)
+        self.sequences = [Sequence(self, name, style=style)
+                          for name in names]

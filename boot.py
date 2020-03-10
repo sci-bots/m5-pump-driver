@@ -4,12 +4,13 @@ import sys
 sys.path.insert(0, '/_lib')  # pragma: no cover
 import time
 import uasyncio as asyncio
+import math
 
 from base_node import BaseDriver, replace
 from config import DEFAULT_SETTINGS, address_map, steps
 from machine import I2C, Pin
 from lvgl_helpers import InputsTabView
-from m5_lvgl import M5ili9341, ButtonsInputEncoder, EncoderInputDriver
+from m5_lvgl import M5ili9341
 from pump import pump
 from valve import set_valve
 import functools as ft
@@ -79,42 +80,77 @@ switches = sorted(set(switches['pin'] for super_step in steps
                     for switches in step.get('switches', tuple())))
 step_names = tuple(step['label'] for super_step in steps
                    for step in super_step['steps'])
-steps_list = tabview.add_widget('Steps', ui.PumpList, step_names,
-                                ui_context['style'])
-pump_list = tabview.add_widget('Pumps', ui.PumpList, pumps,
+steps_tab = tabview.add_widget('Steps', ui.PumpList, step_names,
                                ui_context['style'])
-valve_list = tabview.add_widget('Valves', ui.ValveList, valves,
-                                ui_context['style'])
+steps_list = [step for super_step in steps for step in super_step['steps']]
+
+sequences_tab = tabview.add_widget('Sequences', ui.SequenceList, ['Mix A+B'],
+                                   ui_context['style'])
+
 gc.collect()
 
-def pump_callback(i2c, i2c_address, pin, pump_i, obj, event, *args, **kwargs):
-    loop = asyncio.get_event_loop()
-    if event == lv.EVENT.PRESSED:
-        period_ms = int(1e3 * pump_i.period)
-        off_ms = max(max(period_ms, 50) - 50, 150)
-        loop.create_task(pump(i2c, i2c_address, pin, pump_i.pulses,
-                              off_ms=off_ms))
-        
-output_pins = (gm.IN1, gm.IN2, gm.IN3, gm.IN4)
-for config_i, pump_i in zip((address_map[p] for p in pumps), pump_list.pumps):
-    pump_i.button.set_event_cb(ft.partial(pump_callback, i2c, config_i['addr'],
-                                          output_pins[config_i['index']],
-                                          pump_i))
-    gc.collect()
+mix_ab_running = False
+mix_ab_start_time = 0
 
-def valve_callback(i2c, i2c_address, pin, obj, event, *args, **kwargs):
-    loop = asyncio.get_event_loop()
+async def mix_ab():
+    global mix_ab_running
+    global mix_ab_start_time
+
+    sequence = sequences_tab.sequences[0]
+    liquid_in_a = True
+
+    while True:
+        if mix_ab_running:
+            run_time = time.time() - mix_ab_start_time
+            
+            seconds = run_time % 60
+            minutes = math.floor(run_time % 3600 / 60)
+            hours = math.floor(run_time / 3600)
+
+            sequence.time.set_text('%02d:%02d:%02d' % (hours, minutes, seconds))
+
+            if minutes == 0 and liquid_in_a:
+                i = find_step('A -> B')
+                apply_step(steps_list[i], steps_tab.pumps[i])
+                liquid_in_a = False
+            elif minutes == 30 and not liquid_in_a:
+                i = find_step('B -> A')
+                apply_step(steps_list[i], steps_tab.pumps[i])
+                liquid_in_a = True
+
+            if hours >= 16:
+                sequence.switch.off(0)
+                mix_ab_callback(sequence.switch, lv.EVENT.VALUE_CHANGED)
+
+        await asyncio.sleep(1)
+
+
+def find_step(name):
+    for i, name_i in zip(range(len(step_names)), step_names):
+        if name_i == name:
+            return i
+
+
+def mix_ab_callback(obj, event, *args, **kwargs):
+    global mix_ab_running
+    global mix_ab_start_time
+
     if event == lv.EVENT.VALUE_CHANGED:
-        loop.create_task(set_valve(i2c, i2c_address, pin, obj.get_state()))
+        if obj.get_state():
+            mix_ab_running = True
+            mix_ab_start_time = time.time()
+        else:
+            mix_ab_running = False
+            sequences_tab.sequences[0].time.set_text('')
+
+
+sequences_tab.sequences[0].switch.set_event_cb(mix_ab_callback)
+
+loop.create_task(mix_ab())
 
 gc.collect()
-        
-for config_i, valve_i in zip((address_map[v] for v in valves),
-                             valve_list.valves):
-    valve_i.switch.set_event_cb(ft.partial(valve_callback, i2c,
-                                           config_i['addr'],
-                                           output_pins[config_i['index']]))
-    gc.collect()
+
+output_pins = (gm.IN1, gm.IN2, gm.IN3, gm.IN4)
 
 async def set_switch(pin, value):
     Pin(pin, Pin.OUT).value(value)
@@ -151,7 +187,7 @@ def step_callback(step, widget, obj, event, *args, **kwargs):
 
 for step_i, widget_i in zip((step for super_step in steps
                              for step in super_step['steps']),
-                            steps_list.pumps):
+                            steps_tab.pumps):
     widget_i.button.set_event_cb(ft.partial(step_callback, step_i, widget_i))
     gc.collect()
 
@@ -162,6 +198,6 @@ for step_i, widget_i in zip((step for super_step in steps
 
 # Cycle the encoder through all of the widgets on the "Steps" tab to hide
 # the blinking cursors on the spinboxes.
-encoder._diff = len(steps_list.pumps) * 3 + 1
+encoder._diff = len(steps_tab.pumps) * 3 + 1
 
 _thread.start_new_thread(loop.run_forever, tuple())
