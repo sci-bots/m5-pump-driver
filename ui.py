@@ -17,8 +17,8 @@ class Button(lv.btn):
 
 class Step(lv.cont):
     def __init__(
-            self, parent, label, default_pulses=20, min_pulses=1,
-            max_pulses=300, default_period=1, min_period=0.2, max_period=100,
+            self, parent, label, default_pulses=50, min_pulses=1,
+            max_pulses=750, default_period=1, min_period=0.2, max_period=100,
             style=None):
         super().__init__(parent)
         if style is None:
