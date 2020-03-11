@@ -15,7 +15,7 @@ class Button(lv.btn):
         self.set_fit(lv.FIT.TIGHT)
 
 
-class Step(lv.cont):
+class Pump(lv.cont):
     def __init__(
             self, parent, label, default_pulses=20, min_pulses=1,
             max_pulses=300, default_period=1, min_period=0.2, max_period=100,
@@ -76,7 +76,7 @@ class Step(lv.cont):
         return [self.button, self.pulses_spinbox, self.period_spinbox]
 
 
-class StepWindow(lv.win):
+class PumpWindow(lv.win):
     def __init__(self, parent, style=None):
         super().__init__(parent)
         if style is None:
@@ -99,8 +99,11 @@ class StepWindow(lv.win):
         content = self.get_content()
         lv.page.set_scrl_layout(content, lv.LAYOUT.COL_L)
 
-        self.steps = [Step(content, 'Step obj %d' % i, style=style)
+        self.pumps = [Pump(content, 'Pump obj %d' % i, style=style)
                       for i in range(2)]
+        # for pump_i in self.pumps:
+        #     for child_ij in pump_i.children():
+        #         lv.group_add_obj(self.group, child_ij)
         for child_i in reversed(list(children_recursive(content))):
             if not isinstance(child_i, (lv.obj, lv.cont, lv.label)):
                 lv.group_add_obj(self.group, child_i)
@@ -133,11 +136,35 @@ def ui_context(disp, i2c):
     return ui_context_
 
 
-class StepList(InputsContainer):
+class PumpList(InputsContainer):
     def __init__(self, parent, names, style=None):
         super().__init__(parent, style=style)
-        self.steps = [Step(self, name, style=style)
+        self.pumps = [Pump(self, name, style=style)
                       for name in names]
+
+
+class Valve(lv.cont):
+    def __init__(self, parent, label, style=None):
+        super().__init__(parent)
+        if style is None:
+            style = lv.style_t()
+            lv.style_copy(style, lv.style_transp)
+        self.set_style(lv.cont.STYLE.MAIN, style)
+        self.set_auto_realign(True)
+        self.set_fit(lv.FIT.TIGHT)
+        self.set_layout(lv.LAYOUT.ROW_M)
+
+        self.label = lv.label(self)
+        self.label.set_text(label)
+        self.switch = lv.sw(self)
+        
+
+class ValveList(InputsContainer):
+    def __init__(self, parent, names, style=None):
+        super().__init__(parent, style=style)
+        self.valves = [Valve(self, name, style=style)
+                       for name in names]
+        self.set_layout(lv.LAYOUT.PRETTY)
 
 
 class Sequence(lv.cont):
