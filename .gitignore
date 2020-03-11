@@ -1,2 +1,4 @@
 .history
-*-checkpoint.ipynb
+.ipynb_checkpoints
+desktop.ini
+pymakr.conf
