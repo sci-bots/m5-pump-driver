@@ -68,29 +68,6 @@ loop.create_task(faces_encoder_update(encoder))
 tabview = InputsTabView(lv.scr_act(), (ui_context['button_driver'],
                                        ui_context['faces_driver']))
 
-# BTN_TGL_REL: Active tab when you're not hovering over it
-style = lv.style_t()
-lv.style_copy(style, tabview.get_style(lv.tabview.STYLE.BTN_TGL_REL))
-style.body.main_color = lv.color_hex(0x000000)
-style.body.grad_color = lv.color_hex(0x000000)
-tabview.set_style(lv.tabview.STYLE.BTN_TGL_REL, style)
-
-# BTN_REL: Inactive tab when you're not hovering over it
-
-# BTN_TGL_PR: Active tab when you're hovering over it
-style = lv.style_t()
-lv.style_copy(style, tabview.get_style(lv.tabview.STYLE.BTN_TGL_PR))
-style.body.main_color = lv.color_hex(0x444444)
-style.body.grad_color = lv.color_hex(0x444444)
-tabview.set_style(lv.tabview.STYLE.BTN_TGL_PR, style)
-
-# BTN_PR: Inactive tab when you're hovering over it
-style = lv.style_t()
-lv.style_copy(style, tabview.get_style(lv.tabview.STYLE.BTN_PR))
-style.body.main_color = lv.color_hex(0x444444)
-style.body.grad_color = lv.color_hex(0x444444)
-tabview.set_style(lv.tabview.STYLE.BTN_PR, style)
-
 switches = sorted(set(switches['pin'] for super_step in steps
                     for step in super_step['steps']
                     for switches in step.get('switches', tuple())))

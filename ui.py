@@ -31,13 +31,6 @@ class Step(lv.cont):
 
         button_i = Button(self, label)
 
-        btn_style = lv.style_t()
-        lv.style_copy(btn_style, button_i.get_style(lv.btn.STYLE.TGL_REL))
-        btn_style.body.main_color = lv.color_hex(0x000000)
-        btn_style.body.grad_color = lv.color_hex(0x000000)
-        button_i.set_style(lv.btn.STYLE.TGL_REL, btn_style)
-        button_i.set_toggle(True)
-
         pulses_i = lv.cont(self)
         pulses_i.set_style(lv.cont.STYLE.MAIN, style)
         pulses_i.set_auto_realign(True)
@@ -128,12 +121,9 @@ def ui_context(disp, i2c):
     lv.style_copy(win_style, lv.style_transp)
     win_style.body.padding.left = 5
     win_style.body.padding.right = 5
-    win_style.body.padding.top = 1
-    win_style.body.padding.bottom = 1
+    win_style.body.padding.top = 0
+    win_style.body.padding.bottom = 0
     win_style.body.padding.inner = 0
-
-    #theme = lv.theme_material_init(210, lv.font_roboto_12)
-    #lv.theme_set_current(theme)
 
     lv.scr_load(scr)
 
